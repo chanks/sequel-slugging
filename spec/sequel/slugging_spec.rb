@@ -97,11 +97,38 @@ class SluggingSpec < Minitest::Spec
     end
 
     describe "when the id is a uuid type" do
-      it "should successfully look up records by their slug"
+      before do
+        DB.drop_table :widgets
+        DB.create_table :widgets do
+          uuid :id, primary_key: true, default: Sequel.function(:uuid_generate_v4)
 
-      it "should successfully look up records by their id"
+          text :name, null: false
+          text :slug, null: false, unique: true
+        end
 
-      it "should not pass the id to the DB when it isn't formatted like a uuid"
+        @original_db_schema = Widget.db_schema
+        Widget.send(:instance_variable_set, :@db_schema, nil)
+      end
+
+      after do
+        Widget.send(:instance_variable_set, :@db_schema, @original_db_schema)
+      end
+
+      it "should successfully look up records by their slug" do
+        widget = Widget.create name: "Blah"
+        assert_equal widget.id, Widget.from_slug('blah').id
+      end
+
+      it "should successfully look up records by their id" do
+        $break = true
+        widget = Widget.create name: "Blah"
+        assert_equal widget.id, Widget.from_slug(widget.id).id
+      end
+
+      it "should not pass the id to the DB when it isn't formatted like a uuid" do
+        widget = Widget.create name: "Blah"
+        assert_raises(Sequel::NoMatchingRow){Widget.from_slug('gsnrosehe')}
+      end
     end
   end
 

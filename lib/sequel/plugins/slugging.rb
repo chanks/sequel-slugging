@@ -6,6 +6,8 @@ require 'sequel/plugins/slugging/version'
 module Sequel
   module Plugins
     module Slugging
+      UUID_REGEX = /\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/
+
       class << self
         attr_writer :slugifier, :maximum_length
 
@@ -79,23 +81,36 @@ module Sequel
 
       module DatasetMethods
         def from_slug(id_or_slug)
-          m    = self.model
-          pk   = m.primary_key
-          type = m.db_schema[pk][:type]
+          m         = self.model
+          pk        = m.primary_key
+          pk_schema = m.db_schema[pk]
 
-          case id_or_slug
-          when String
-            if id_or_slug =~ /\A\d{1,}\z/
-              where(id: id_or_slug.to_i).first!
+          if pk_schema[:type] == :integer
+            case id_or_slug
+            when String
+              if id_or_slug =~ /\A\d{1,}\z/
+                where(id: id_or_slug.to_i).first!
+              else
+                where(slug: id_or_slug).first!
+              end
+            when Integer
+              where(pk => id_or_slug).first!
             else
-              where(slug: id_or_slug).first!
+              raise "Argument to Dataset#from_slug needs to be a String or Integer"
             end
-          when Integer
-            case type
-            when :integer then where(pk => id_or_slug).first!
-            else raise Sequel::RecordNotFound
+          elsif pk_schema[:db_type] == 'uuid'.freeze
+            record = where(slug: id_or_slug).first
+            return record if record
+
+            if id_or_slug =~ UUID_REGEX
+              where(pk => id_or_slug).first!
+            else
+              raise Sequel::NoMatchingRow
             end
+          else
+            raise "#from_slug can't handle this pk: #{pk_schema.inspect}"
           end
+
         end
       end
     end

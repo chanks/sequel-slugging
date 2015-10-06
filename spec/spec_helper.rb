@@ -7,6 +7,8 @@ require 'sequel'
 
 DB = Sequel.connect("postgres:///sequel-slugging-test")
 
+DB.run 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'
+
 DB.drop_table? :widgets
 
 DB.create_table :widgets do
