@@ -5,14 +5,16 @@ require 'sequel/plugins/slugging/version'
 module Sequel
   module Plugins
     module Slugging
-      def self.configure(model, opts={})
+      def self.configure(model, source:)
         model.instance_eval do
-          @slugging_opts = opts.freeze
+          @slugging_opts = {source: source}.freeze
         end
       end
 
       module ClassMethods
         attr_reader :slugging_opts
+
+        Sequel::Plugins.inherited_instance_variables(self, :@slugging_opts => ->(h){h.dup.freeze})
       end
 
       module InstanceMethods
