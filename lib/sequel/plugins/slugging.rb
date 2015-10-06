@@ -1,4 +1,5 @@
 require 'securerandom'
+require 'set'
 
 require 'sequel/plugins/slugging/version'
 
@@ -17,6 +18,12 @@ module Sequel
             s.gsub!(/^-|-$/, ''.freeze)
             s
           end
+        end
+
+        attr_reader :reserved_words
+
+        def reserved_words=(value)
+          @reserved_words = Set.new(value)
         end
       end
 
@@ -48,11 +55,17 @@ module Sequel
           input = send(self.class.slugging_opts[:source])
           string = Sequel::Plugins::Slugging.slugifier.call(input)
 
-          if self.class.dataset.where(slug: string).empty?
+          if acceptable_slug?(string)
             string
           else
             string << '-'.freeze << SecureRandom.uuid
           end
+        end
+
+        def acceptable_slug?(slug)
+          reserved = Sequel::Plugins::Slugging.reserved_words
+          return false if reserved && reserved.include?(slug)
+          self.class.dataset.where(slug: slug).empty?
         end
       end
 

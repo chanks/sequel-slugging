@@ -56,7 +56,16 @@ class SluggingSpec < Minitest::Spec
 
   it "should support a dataset method to find a record by slug or id"
 
-  it "should support a universal list of reserved words that shouldn't be slugs"
+  it "should support a universal list of reserved words that shouldn't be slugs" do
+    begin
+      Sequel::Plugins::Slugging.reserved_words = ['blah', 'hello']
+
+      widget = Widget.create(name: "blah")
+      assert_match(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, widget.slug)
+    ensure
+      Sequel::Plugins::Slugging.reserved_words = nil
+    end
+  end
 
   describe "when calculating a slug" do
     it "should use the source method to determine a slug" do
