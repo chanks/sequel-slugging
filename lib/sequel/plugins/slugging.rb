@@ -40,6 +40,7 @@ module Sequel
         attr_reader :slugging_opts
 
         Sequel::Plugins.inherited_instance_variables(self, :@slugging_opts => ->(h){h.dup.freeze})
+        Sequel::Plugins.def_dataset_methods(self, :from_slug)
       end
 
       module InstanceMethods
@@ -77,6 +78,10 @@ module Sequel
       end
 
       module DatasetMethods
+        def from_slug(id_or_slug)
+          where(slug: id_or_slug).first ||
+          where(id: id_or_slug).first
+        end
       end
     end
   end

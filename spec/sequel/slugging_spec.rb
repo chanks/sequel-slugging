@@ -79,11 +79,21 @@ class SluggingSpec < Minitest::Spec
 
   describe "when finding a record by a slug or id" do
     describe "when the id is an integer type" do
-      it "should successfully look up records by their slug"
+      it "should successfully look up records by their slug" do
+        widget = Widget.create name: "Blah"
+        assert_equal widget.id, Widget.from_slug('blah').id
+      end
 
-      it "should successfully look up records by their id"
+      it "should successfully look up records by their id" do
+        widget = Widget.create name: "Blah"
+        assert_equal widget.id, Widget.from_slug(widget.id).id
+        assert_equal widget.id, Widget.from_slug(widget.id.to_s).id
+      end
 
-      it "should not pass the slug to the DB when it isn't formatted like an integer"
+      it "should not error in the id lookup when it isn't formatted like an integer" do
+        widget = Widget.create name: "Blah"
+        assert_nil Widget.from_slug('gsnrosehe')
+      end
     end
 
     describe "when the id is a uuid type" do
