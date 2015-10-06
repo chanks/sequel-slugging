@@ -1,11 +1,19 @@
 require 'spec_helper'
 
 class SluggingSpec < Minitest::Spec
+  include Minitest::Hooks
+
   class Widget < Sequel::Model
   end
 
   before do
     Widget.plugin :slugging, source: :name
+  end
+
+  around do |&block|
+    DB.transaction(rollback: :always, savepoint: true, auto_savepoint: true) do
+      super(&block)
+    end
   end
 
   it "should have a version number" do
@@ -35,7 +43,16 @@ class SluggingSpec < Minitest::Spec
     assert WidgetSubclass.slugging_opts.frozen?
   end
 
-  it "should support alternate logic for slugifying strings"
+  it "should support alternate logic for slugifying strings" do
+    begin
+      Sequel::Plugins::Slugging.slugifier = proc(&:upcase)
+
+      widget = Widget.create(name: "blah")
+      assert_equal 'BLAH', widget.slug
+    ensure
+      Sequel::Plugins::Slugging.slugifier = nil
+    end
+  end
 
   it "should support a dataset method to find a record by slug or id"
 

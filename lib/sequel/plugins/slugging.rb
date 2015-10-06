@@ -5,6 +5,21 @@ require 'sequel/plugins/slugging/version'
 module Sequel
   module Plugins
     module Slugging
+      class << self
+        # Overridable slugification logic.
+        attr_writer :slugifier
+
+        def slugifier
+          @slugifier ||= proc do |string|
+            s = string.downcase
+            s.gsub!(/[^a-z0-9\-_]+/, '-'.freeze)
+            s.gsub!(/-{2,}/, '-'.freeze)
+            s.gsub!(/^-|-$/, ''.freeze)
+            s
+          end
+        end
+      end
+
       def self.configure(model, source:)
         model.instance_eval do
           @slugging_opts = {source: source}.freeze
@@ -30,10 +45,8 @@ module Sequel
         end
 
         def find_available_slug
-          string = send(self.class.slugging_opts[:source]).downcase
-          string.gsub!(/[^a-z0-9\-_]+/, '-'.freeze)
-          string.gsub!(/-{2,}/, '-'.freeze)
-          string.gsub!(/^-|-$/, ''.freeze)
+          input = send(self.class.slugging_opts[:source])
+          string = Sequel::Plugins::Slugging.slugifier.call(input)
 
           if self.class.dataset.where(slug: string).empty?
             string
