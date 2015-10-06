@@ -56,6 +56,9 @@ module Sequel
 
         def find_available_slug
           string = send(self.class.slugging_opts[:source])
+
+          return SecureRandom.uuid if string.nil? || string == ''.freeze
+
           string = Sequel::Plugins::Slugging.slugifier.call(string)
           string = string.slice(0...Sequel::Plugins::Slugging.maximum_length)
 

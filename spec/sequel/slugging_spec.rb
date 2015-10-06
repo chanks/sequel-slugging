@@ -113,12 +113,24 @@ class SluggingSpec < Minitest::Spec
       end
     end
 
-    it "should prevent duplicate slugs" do
-      first  = Widget.create name: "Blah"
-      second = Widget.create name: "Blah"
+    it "should behave sensibly when a source is empty" do
+      assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: ''))
+    end
 
-      assert_slug 'blah', first
-      assert_slug(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, second)
+    it "should behave sensibly when a source is nil" do
+      Widget.plugin :slugging, source: :nil_returning_method
+
+      class Widget
+        def nil_returning_method
+        end
+      end
+
+      assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'Blah'))
+    end
+
+    it "should prevent duplicate slugs" do
+      assert_slug 'blah', Widget.create(name: "Blah")
+      assert_slug(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: "Blah"))
     end
 
     it "should enforce a maximum length" do
