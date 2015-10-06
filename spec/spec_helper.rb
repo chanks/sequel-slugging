@@ -5,7 +5,9 @@ require 'minitest/hooks'
 
 require 'sequel'
 
-DB = Sequel.sqlite
+DB = Sequel.connect("postgres:///sequel-slugging-test")
+
+DB.drop_table? :widgets
 
 DB.create_table :widgets do
   primary_key :id
