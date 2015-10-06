@@ -5,11 +5,12 @@ module Sequel
     module Slugging
       def self.configure(model, opts={})
         model.instance_eval do
-          @slugging_opts = opts
+          @slugging_opts = opts.freeze
         end
       end
 
       module ClassMethods
+        attr_reader :slugging_opts
       end
 
       module InstanceMethods

@@ -10,9 +10,5 @@ DB.create_table :widgets do
   primary_key :id
 
   text :name, null: false
-  text :slug, null: false
-end
-
-class Widget < Sequel::Model
-  plugin :slugging
+  text :slug, null: false, unique: true
 end
