@@ -79,8 +79,23 @@ module Sequel
 
       module DatasetMethods
         def from_slug(id_or_slug)
-          where(slug: id_or_slug).first ||
-          where(id: id_or_slug).first
+          m    = self.model
+          pk   = m.primary_key
+          type = m.db_schema[pk][:type]
+
+          case id_or_slug
+          when String
+            if id_or_slug =~ /\A\d{1,}\z/
+              where(id: id_or_slug.to_i).first!
+            else
+              where(slug: id_or_slug).first!
+            end
+          when Integer
+            case type
+            when :integer then where(pk => id_or_slug).first!
+            else raise Sequel::RecordNotFound
+            end
+          end
         end
       end
     end
