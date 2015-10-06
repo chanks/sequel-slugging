@@ -1,3 +1,5 @@
+require 'securerandom'
+
 require 'sequel/plugins/slugging/version'
 
 module Sequel
@@ -22,11 +24,20 @@ module Sequel
         end
 
         def set_slug
+          self.slug = find_available_slug
+        end
+
+        def find_available_slug
           string = send(self.class.slugging_opts[:source]).downcase
           string.gsub!(/[^a-z0-9\-_]+/, '-'.freeze)
           string.gsub!(/-{2,}/, '-'.freeze)
           string.gsub!(/^-|-$/, ''.freeze)
-          self.slug = string
+
+          if self.class.dataset.where(slug: string).empty?
+            string
+          else
+            string << '-'.freeze << SecureRandom.uuid
+          end
         end
       end
 

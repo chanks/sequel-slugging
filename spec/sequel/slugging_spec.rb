@@ -42,7 +42,14 @@ class SluggingSpec < Minitest::Spec
         end
       end
 
-      it "should avoid duplicate slugs"
+      it "should prevent duplicate slugs" do
+        Widget.create name: "Blah"
+        Widget.create name: "Blah"
+
+        first, second = Widget.select_order_map(:slug)
+        assert_equal 'blah', first
+        assert_match(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, second)
+      end
 
       it "should support logic to normalize slug input"
 
