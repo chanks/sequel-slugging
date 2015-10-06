@@ -96,7 +96,22 @@ class SluggingSpec < Minitest::Spec
       assert_slug(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, second)
     end
 
-    it "should enforce a maximum length"
+    it "should enforce a maximum length" do
+      begin
+        assert_equal Sequel::Plugins::Slugging.maximum_length, 50
+        Sequel::Plugins::Slugging.maximum_length = 10
+
+        string = "Turn around, bright eyes! Every now and then I fall apart!"
+
+        first  = Widget.create(name: string)
+        second = Widget.create(name: string)
+
+        assert_slug 'turn-aroun', first
+        assert_slug(/\Aturn-aroun-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, second)
+      ensure
+        Sequel::Plugins::Slugging.maximum_length = 50
+      end
+    end
 
     it "should support logic to normalize slug input"
 

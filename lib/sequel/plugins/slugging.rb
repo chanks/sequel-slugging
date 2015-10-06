@@ -7,8 +7,7 @@ module Sequel
   module Plugins
     module Slugging
       class << self
-        # Overridable slugification logic.
-        attr_writer :slugifier
+        attr_writer :slugifier, :maximum_length
 
         def slugifier
           @slugifier ||= proc do |string|
@@ -18,6 +17,10 @@ module Sequel
             s.gsub!(/^-|-$/, ''.freeze)
             s
           end
+        end
+
+        def maximum_length
+          @maximum_length ||= 50
         end
 
         attr_reader :reserved_words
@@ -52,8 +55,9 @@ module Sequel
         end
 
         def find_available_slug
-          input = send(self.class.slugging_opts[:source])
-          string = Sequel::Plugins::Slugging.slugifier.call(input)
+          string = send(self.class.slugging_opts[:source])
+          string = Sequel::Plugins::Slugging.slugifier.call(string)
+          string = string.slice(0...Sequel::Plugins::Slugging.maximum_length)
 
           if acceptable_slug?(string)
             string
