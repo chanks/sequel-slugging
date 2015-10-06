@@ -68,8 +68,6 @@ class SluggingSpec < Minitest::Spec
     end
   end
 
-  it "should support a dataset method to find a record by slug or id"
-
   it "should support a universal list of reserved words that shouldn't be slugs" do
     begin
       Sequel::Plugins::Slugging.reserved_words = ['blah', 'hello']
@@ -79,10 +77,37 @@ class SluggingSpec < Minitest::Spec
     end
   end
 
+  describe "when finding a record by a slug or id" do
+    describe "when the id is an integer type" do
+      it "should successfully look up records by their slug"
+
+      it "should successfully look up records by their id"
+
+      it "should not pass the slug to the DB when it isn't formatted like an integer"
+    end
+
+    describe "when the id is a uuid type" do
+      it "should successfully look up records by their slug"
+
+      it "should successfully look up records by their id"
+
+      it "should not pass the id to the DB when it isn't formatted like a uuid"
+    end
+  end
+
   describe "when calculating a slug" do
     it "should use the source method to determine a slug" do
-      ["Tra la la", "Tra la la!", "Tra  la  la", "  Tra la la  !  "].each do |input|
-        widget = Widget.create name: input
+      names = [
+        "Tra la la", # Standard
+        "Tra la la!", # With non-alphanumeric
+        "Tra  la  la", # With excess whitespace
+        "  Tra la la  !  ", # With whitespace at beginning and end
+        "345 Tra la la!!!", # With numerics that could confuse a search for an id = 345
+        "Tra la 735 la!", # More numerics
+      ]
+
+      names.each do |name|
+        widget = Widget.create name: name
         assert_slug 'tra-la-la', widget
         widget.destroy # Avoid uniqueness issues.
       end

@@ -12,7 +12,7 @@ module Sequel
         def slugifier
           @slugifier ||= proc do |string|
             s = string.downcase
-            s.gsub!(/[^a-z0-9\-_]+/, '-'.freeze)
+            s.gsub!(/[^a-z\-_]+/, '-'.freeze)
             s.gsub!(/-{2,}/, '-'.freeze)
             s.gsub!(/^-|-$/, ''.freeze)
             s
