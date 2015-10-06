@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'sequel/slugging/version'
+require 'sequel/plugins/slugging/version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'sequel-slugging'
-  spec.version       = Sequel::Slugging::VERSION
+  spec.version       = Sequel::Plugins::Slugging::VERSION
   spec.authors       = ["Chris Hanks"]
   spec.email         = ['christopher.m.hanks@gmail.com']
 
