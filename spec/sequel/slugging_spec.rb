@@ -2,15 +2,21 @@ require 'spec_helper'
 
 class SluggingSpec < Minitest::Spec
   class Widget < Sequel::Model
-    plugin :slugging, source: :name
   end
 
   it "should have a version number" do
+    Widget.plugin :slugging, source: :name
     assert_instance_of String, ::Sequel::Plugins::Slugging::VERSION
+    assert ::Sequel::Plugins::Slugging::VERSION.frozen?
   end
 
   it "should have the slugging opts available on the model" do
+    Widget.plugin :slugging, source: :name
     assert_equal Widget.slugging_opts, {source: :name}
+    assert Widget.slugging_opts.frozen?
+
+    Widget.plugin :slugging, source: :other
+    assert_equal Widget.slugging_opts, {source: :other}
     assert Widget.slugging_opts.frozen?
   end
 
@@ -20,9 +26,21 @@ class SluggingSpec < Minitest::Spec
 
   it "should support a universal list of reserved words that shouldn't be slugs"
 
+  it "should support an alternate piece of slugification logic"
+
   describe "when calculating a slug" do
     describe "from a single method returning a string" do
-      it "should use the source method to determine a slug"
+      before do
+        Widget.plugin :slugging, source: :name
+      end
+
+      it "should use the source method to determine a slug" do
+        ["Tra la la", "Tra la la!", "Tra  la  la", "  Tra la la  !  "].each do |input|
+          widget = Widget.create name: input
+          assert_equal 'tra-la-la', widget.slug
+          widget.destroy # Avoid uniqueness issues.
+        end
+      end
 
       it "should avoid duplicate slugs"
 

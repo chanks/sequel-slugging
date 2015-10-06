@@ -14,6 +14,20 @@ module Sequel
       end
 
       module InstanceMethods
+        private
+
+        def before_save
+          set_slug
+          super
+        end
+
+        def set_slug
+          string = send(self.class.slugging_opts[:source]).downcase
+          string.gsub!(/[^a-z0-9\-_]+/, '-'.freeze)
+          string.gsub!(/-{2,}/, '-'.freeze)
+          string.gsub!(/^-|-$/, ''.freeze)
+          self.slug = string
+        end
       end
 
       module DatasetMethods
