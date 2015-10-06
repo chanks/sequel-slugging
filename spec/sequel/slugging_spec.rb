@@ -6,6 +6,22 @@ class SluggingSpec < Minitest::Spec
   class Widget < Sequel::Model
   end
 
+  def assert_slug(slug, model)
+    in_model = model.slug
+    in_db    = model.this.get(:slug)
+
+    case slug
+    when String
+      assert_equal slug, in_model
+      assert_equal slug, in_db
+    when Regexp
+      assert_match slug, in_model
+      assert_match slug, in_db
+    else
+      raise "Bad slug!: #{slug.inspect}"
+    end
+  end
+
   before do
     Widget.plugin :slugging, source: :name
   end
@@ -46,9 +62,7 @@ class SluggingSpec < Minitest::Spec
   it "should support alternate logic for slugifying strings" do
     begin
       Sequel::Plugins::Slugging.slugifier = proc(&:upcase)
-
-      widget = Widget.create(name: "blah")
-      assert_equal 'BLAH', widget.slug
+      assert_slug 'BLAH', Widget.create(name: "blah")
     ensure
       Sequel::Plugins::Slugging.slugifier = nil
     end
@@ -59,9 +73,7 @@ class SluggingSpec < Minitest::Spec
   it "should support a universal list of reserved words that shouldn't be slugs" do
     begin
       Sequel::Plugins::Slugging.reserved_words = ['blah', 'hello']
-
-      widget = Widget.create(name: "blah")
-      assert_match(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, widget.slug)
+      assert_slug(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: "blah"))
     ensure
       Sequel::Plugins::Slugging.reserved_words = nil
     end
@@ -71,19 +83,20 @@ class SluggingSpec < Minitest::Spec
     it "should use the source method to determine a slug" do
       ["Tra la la", "Tra la la!", "Tra  la  la", "  Tra la la  !  "].each do |input|
         widget = Widget.create name: input
-        assert_equal 'tra-la-la', widget.slug
+        assert_slug 'tra-la-la', widget
         widget.destroy # Avoid uniqueness issues.
       end
     end
 
     it "should prevent duplicate slugs" do
-      Widget.create name: "Blah"
-      Widget.create name: "Blah"
+      first  = Widget.create name: "Blah"
+      second = Widget.create name: "Blah"
 
-      first, second = Widget.select_order_map(:slug)
-      assert_equal 'blah', first
-      assert_match(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, second)
+      assert_slug 'blah', first
+      assert_slug(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, second)
     end
+
+    it "should enforce a maximum length"
 
     it "should support logic to normalize slug input"
 
