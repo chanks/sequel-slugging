@@ -15,5 +15,7 @@ DB.create_table :widgets do
   primary_key :id
 
   text :name, null: false
+  text :other_text
+  text :more_text
   text :slug, null: false, unique: true
 end

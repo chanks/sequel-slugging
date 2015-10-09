@@ -71,28 +71,43 @@ module Sequel
         end
 
         def find_available_slug
-          string = send(self.class.slugging_opts[:source])
+          string = nil
 
-          return SecureRandom.uuid if string.nil? || string == ''.freeze
+          Array(self.class.slugging_opts[:source]).each do |method_set|
+            method_set = Array(method_set)
+            string = method_set.map{|meth| send(meth)}.join(' ')
+            string = Sequel::Plugins::Slugging.slugifier.call(string)
+            string = string.slice(0...Sequel::Plugins::Slugging.maximum_length)
 
-          string = Sequel::Plugins::Slugging.slugifier.call(string)
-          string = string.slice(0...Sequel::Plugins::Slugging.maximum_length)
+            if acceptable_slug?(string)
+              return string
+            end
+          end
 
-          if acceptable_slug?(string)
-            string
-          else
+          if acceptable_string?(string)
             string << '-'.freeze << SecureRandom.uuid
+          else
+            SecureRandom.uuid
           end
         end
 
         def acceptable_slug?(slug)
+          return false unless acceptable_string?(slug)
           reserved = Sequel::Plugins::Slugging.reserved_words
           return false if reserved && reserved.include?(slug)
           self.class.dataset.where(slug: slug).empty?
         end
+
+        def acceptable_string?(string)
+          string && string != ''.freeze
+        end
       end
 
       module DatasetMethods
+        def from_slug!(pk_or_slug)
+          from_slug(pk_or_slug) || raise(Sequel::NoMatchingRow)
+        end
+
         def from_slug(pk_or_slug)
           pk = model.primary_key
 
@@ -119,10 +134,6 @@ module Sequel
           else
             raise "Unexpected pk_type: #{pk_type.inspect}"
           end
-        end
-
-        def from_slug!(pk_or_slug)
-          from_slug(pk_or_slug) || raise(Sequel::NoMatchingRow)
         end
       end
     end

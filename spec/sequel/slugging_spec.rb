@@ -199,10 +199,26 @@ class SluggingSpec < Minitest::Spec
 
     it "should support logic to determine when to calculate a new slug"
 
-    describe "from a collection of string source methods" do
-      it "should use the source method to determine a slug"
+    describe "from no source" do
+      it "should always use a UUID"
+    end
 
-      it "should avoid duplicate slugs"
+    describe "from a collection of string source methods" do
+      before do
+        Widget.plugin :slugging, source: [:name, [:name, :other_text], [:name, :more_text], [:name, :other_text, :more_text]]
+      end
+
+      it "should use the source method collection to determine a slug" do
+        def new_widget
+          Widget.create(name: "name", other_text: "other text", more_text: "more text")
+        end
+
+        assert_slug 'name', new_widget
+        assert_slug 'name-other-text', new_widget
+        assert_slug 'name-more-text', new_widget
+        assert_slug 'name-other-text-more-text', new_widget
+        assert_slug(/\Aname-other-text-more-text-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+      end
     end
 
     describe "when given the history option" do
