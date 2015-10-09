@@ -81,11 +81,11 @@ module Sequel
 
       module DatasetMethods
         def from_slug(id_or_slug)
-          m         = self.model
-          pk        = m.primary_key
-          pk_schema = m.db_schema[pk]
+          m      = model
+          pk     = m.primary_key
+          schema = m.db_schema[pk]
 
-          if pk_schema[:type] == :integer
+          if schema[:type] == :integer
             case id_or_slug
             when String
               if id_or_slug =~ /\A\d{1,}\z/
@@ -98,7 +98,7 @@ module Sequel
             else
               raise "Argument to Dataset#from_slug needs to be a String or Integer"
             end
-          elsif pk_schema[:db_type] == 'uuid'.freeze
+          elsif schema[:db_type] == 'uuid'.freeze
             record = where(slug: id_or_slug).first
             return record if record
 
@@ -110,7 +110,6 @@ module Sequel
           else
             raise "#from_slug can't handle this pk: #{pk_schema.inspect}"
           end
-
         end
       end
     end

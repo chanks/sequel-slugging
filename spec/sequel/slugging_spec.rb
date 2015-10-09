@@ -93,6 +93,7 @@ class SluggingSpec < Minitest::Spec
       it "should not error in the id lookup when it isn't formatted like an integer" do
         widget = Widget.create name: "Blah"
         assert_raises(Sequel::NoMatchingRow){Widget.from_slug('gsnrosehe')}
+        assert_raises(Sequel::NoMatchingRow){Widget.from_slug(widget.id + 1)}
       end
     end
 
@@ -120,7 +121,6 @@ class SluggingSpec < Minitest::Spec
       end
 
       it "should successfully look up records by their id" do
-        $break = true
         widget = Widget.create name: "Blah"
         assert_equal widget.id, Widget.from_slug(widget.id).id
       end
