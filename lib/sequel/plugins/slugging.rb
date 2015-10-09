@@ -71,24 +71,28 @@ module Sequel
         end
 
         def find_available_slug
-          string = nil
+          candidates = []
 
           Array(self.class.slugging_opts[:source]).each do |method_set|
             method_set = Array(method_set)
-            string = method_set.map{|meth| send(meth)}.join(' ')
-            string = Sequel::Plugins::Slugging.slugifier.call(string)
-            string = string.slice(0...Sequel::Plugins::Slugging.maximum_length)
+            candidate = method_set.map{|meth| send(meth)}.join(' ')
+            candidate = Sequel::Plugins::Slugging.slugifier.call(candidate)
+            candidate = candidate.slice(0...Sequel::Plugins::Slugging.maximum_length)
 
-            if acceptable_slug?(string)
-              return string
+            candidates << candidate
+
+            if acceptable_slug?(candidate)
+              return candidate
             end
           end
 
-          if acceptable_string?(string)
-            string << '-'.freeze << SecureRandom.uuid
-          else
-            SecureRandom.uuid
+          candidates.each do |candidate|
+            if acceptable_string?(candidate)
+              return candidate << '-'.freeze << SecureRandom.uuid
+            end
           end
+
+          SecureRandom.uuid
         end
 
         def acceptable_slug?(slug)

@@ -221,7 +221,7 @@ class SluggingSpec < Minitest::Spec
         assert_slug 'name-other-text', new_widget
         assert_slug 'name-more-text', new_widget
         assert_slug 'name-other-text-more-text', new_widget
-        assert_slug(/\Aname-other-text-more-text-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+        assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
       end
     end
 
