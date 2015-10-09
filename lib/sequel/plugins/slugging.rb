@@ -7,6 +7,7 @@ module Sequel
   module Plugins
     module Slugging
       UUID_REGEX = /\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/
+      INTEGER_REGEX = /\A\d{1,}\z/
 
       class << self
         attr_writer :slugifier, :maximum_length
@@ -43,6 +44,18 @@ module Sequel
 
         Sequel::Plugins.inherited_instance_variables(self, :@slugging_opts => ->(h){h.dup.freeze})
         Sequel::Plugins.def_dataset_methods(self, [:from_slug, :from_slug!])
+
+        def pk_type
+          schema = db_schema[primary_key]
+
+          if schema[:type] == :integer
+            :integer
+          elsif schema[:db_type] == 'uuid'.freeze
+            :uuid
+          else
+            raise "The sequel-slugging plugin can't handle this pk type: #{pk_schema.inspect}"
+          end
+        end
       end
 
       module InstanceMethods
@@ -80,38 +93,36 @@ module Sequel
       end
 
       module DatasetMethods
-        def from_slug(id_or_slug)
-          m      = model
-          pk     = m.primary_key
-          schema = m.db_schema[pk]
+        def from_slug(pk_or_slug)
+          pk = model.primary_key
 
-          if schema[:type] == :integer
-            case id_or_slug
-            when String
-              if id_or_slug =~ /\A\d{1,}\z/
-                where(id: id_or_slug.to_i).first
-              else
-                where(slug: id_or_slug).first
-              end
+          case pk_type = model.pk_type
+          when :integer
+            case pk_or_slug
             when Integer
-              where(pk => id_or_slug).first
+              where(pk => pk_or_slug).first
+            when String
+              if pk_or_slug =~ INTEGER_REGEX
+                where(pk => pk_or_slug.to_i).first
+              else
+                where(slug: pk_or_slug).first
+              end
             else
               raise "Argument to Dataset#from_slug needs to be a String or Integer"
             end
-          elsif schema[:db_type] == 'uuid'.freeze
-            record = where(slug: id_or_slug).first
-            return record if record
-
-            if id_or_slug =~ UUID_REGEX
-              where(pk => id_or_slug).first
+          when :uuid
+            if record = where(slug: pk_or_slug).first
+              record
+            elsif pk_or_slug =~ UUID_REGEX
+              where(pk => pk_or_slug).first
             end
           else
-            raise "#from_slug can't handle this pk: #{pk_schema.inspect}"
+            raise "Unexpected pk_type: #{pk_type.inspect}"
           end
         end
 
-        def from_slug!(id_or_slug)
-          from_slug(id_or_slug) || raise(Sequel::NoMatchingRow)
+        def from_slug!(pk_or_slug)
+          from_slug(pk_or_slug) || raise(Sequel::NoMatchingRow)
         end
       end
     end
