@@ -4,6 +4,21 @@ class SluggingSpec < Minitest::Spec
   include Minitest::Hooks
 
   class Widget < Sequel::Model
+    def method_returning_nil
+      nil
+    end
+
+    def method_returning_empty_string
+      ''
+    end
+
+    def method_returning_false
+      false
+    end
+
+    def method_returning_object
+      Object.new
+    end
   end
 
   def assert_slug(slug, model)
@@ -163,12 +178,11 @@ class SluggingSpec < Minitest::Spec
     end
 
     it "should behave sensibly when a source is nil" do
-      Widget.plugin :slugging, source: :nil_returning_method
+      Widget.plugin :slugging, source: :method_returning_nil
 
-      class Widget
-        def nil_returning_method
-        end
-      end
+      assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'Blah'))
+
+      Widget.plugin :slugging, source: :method_returning_empty_string
 
       assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'Blah'))
     end
@@ -208,20 +222,50 @@ class SluggingSpec < Minitest::Spec
     end
 
     describe "from a collection of string source methods" do
-      before do
-        Widget.plugin :slugging, source: [:name, [:name, :other_text], [:name, :more_text], [:name, :other_text, :more_text]]
+      def new_widget
+        Widget.create(name: "name", other_text: "other text", more_text: "more text")
       end
 
       it "should use the source method collection to determine a slug" do
-        def new_widget
-          Widget.create(name: "name", other_text: "other text", more_text: "more text")
-        end
+        Widget.plugin :slugging, source: [:name, [:name, :other_text], [:name, :more_text], [:name, :other_text, :more_text]]
 
         assert_slug 'name', new_widget
         assert_slug 'name-other-text', new_widget
         assert_slug 'name-more-text', new_widget
         assert_slug 'name-other-text-more-text', new_widget
         assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+      end
+
+      it "should be resilient to sources that return nil" do
+        Widget.plugin :slugging, source: [:method_returning_nil, :name, [:name, :other_text]]
+
+        assert_slug 'name', new_widget
+        assert_slug 'name-other-text', new_widget
+        assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+      end
+
+      it "should raise an error if a source returns something unexpected" do
+        Widget.plugin :slugging, source: [:method_returning_object, :name]
+        assert_raises(Sequel::Plugins::Slugging::Error) { new_widget }
+
+        Widget.plugin :slugging, source: [:method_returning_false, :name]
+        assert_raises(Sequel::Plugins::Slugging::Error) { new_widget }
+      end
+
+      it "should be resilient to sources that return empty strings" do
+        Widget.plugin :slugging, source: [:method_returning_empty_string, :name, [:name, :other_text]]
+
+        assert_slug 'name', new_widget
+        assert_slug 'name-other-text', new_widget
+        assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+      end
+
+      it "should behave sensibly when no sources are good" do
+        Widget.plugin :slugging, source: [:method_returning_empty_string, :method_returning_nil]
+        assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+
+        Widget.plugin :slugging, source: [:method_returning_nil, :method_returning_empty_string]
+        assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
       end
     end
 

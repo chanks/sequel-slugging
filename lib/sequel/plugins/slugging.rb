@@ -9,6 +9,8 @@ module Sequel
       UUID_REGEX = /\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/
       INTEGER_REGEX = /\A\d{1,}\z/
 
+      class Error < StandardError; end
+
       class << self
         attr_writer :slugifier, :maximum_length
 
@@ -74,25 +76,26 @@ module Sequel
           candidates = []
 
           Array(self.class.slugging_opts[:source]).each do |method_set|
-            method_set = Array(method_set)
-            candidate = method_set.map{|meth| send(meth)}.join(' ')
+            candidate = Array(method_set).map{|meth| get_slug_component(meth)}.join(' ')
             candidate = Sequel::Plugins::Slugging.slugifier.call(candidate)
             candidate = candidate.slice(0...Sequel::Plugins::Slugging.maximum_length)
 
+            return candidate if acceptable_slug?(candidate)
             candidates << candidate
-
-            if acceptable_slug?(candidate)
-              return candidate
-            end
           end
 
           candidates.each do |candidate|
-            if acceptable_string?(candidate)
-              return candidate << '-'.freeze << SecureRandom.uuid
-            end
+            return candidate << '-'.freeze << SecureRandom.uuid if acceptable_string?(candidate)
           end
 
           SecureRandom.uuid
+        end
+
+        def get_slug_component(method)
+          case component = send(method)
+          when NilClass, String then component
+          else raise Error, "unexpected slug component: #{component.inspect}"
+          end
         end
 
         def acceptable_slug?(slug)
