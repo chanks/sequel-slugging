@@ -200,7 +200,11 @@ class SluggingSpec < Minitest::Spec
     it "should support logic to determine when to calculate a new slug"
 
     describe "from no source" do
-      it "should always use a UUID"
+      it "should always use a UUID" do
+        Widget.plugin :slugging, source: nil
+
+        assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'blah'))
+      end
     end
 
     describe "from a collection of string source methods" do
