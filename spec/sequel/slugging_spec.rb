@@ -156,38 +156,7 @@ class SluggingSpec < Minitest::Spec
   end
 
   describe "when calculating a slug" do
-    it "should use the source method to determine a slug" do
-      names = [
-        "Tra la la", # Standard
-        "Tra la la!", # With non-alphanumeric
-        "Tra  la  la", # With excess whitespace
-        "  Tra la la  !  ", # With whitespace at beginning and end
-        "345 Tra la la!!!", # With numerics that could confuse a search for an id = 345
-        "Tra la 735 la!", # More numerics
-      ]
-
-      names.each do |name|
-        widget = Widget.create name: name
-        assert_slug 'tra-la-la', widget
-        widget.destroy # Avoid uniqueness issues.
-      end
-    end
-
-    it "should behave sensibly when a source is empty" do
-      assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: ''))
-    end
-
-    it "should behave sensibly when a source is nil" do
-      Widget.plugin :slugging, source: :method_returning_nil
-
-      assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'Blah'))
-
-      Widget.plugin :slugging, source: :method_returning_empty_string
-
-      assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'Blah'))
-    end
-
-    it "should prevent duplicate slugs" do
+    it "should prevent duplicates" do
       assert_slug 'blah', Widget.create(name: "Blah")
       assert_slug(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: "Blah"))
     end
@@ -213,59 +182,85 @@ class SluggingSpec < Minitest::Spec
 
     it "should support logic to determine when to calculate a new slug"
 
-    describe "from no source" do
-      it "should always use a UUID" do
-        Widget.plugin :slugging, source: nil
+    describe "from a source method" do
+      it "should simplify the returned text by default" do
+        names = [
+          "Tra la la", # Standard
+          "Tra la la!", # With non-alphanumeric
+          "Tra  la  la", # With excess whitespace
+          "  Tra la la  !  ", # With whitespace at beginning and end
+          "345 Tra la la!!!", # With numerics that could confuse a search for an id = 345
+          "Tra la 735 la!", # More numerics
+        ]
 
+        names.each do |name|
+          widget = Widget.create name: name
+          assert_slug 'tra-la-la', widget
+          widget.destroy # Avoid uniqueness issues.
+        end
+      end
+
+      it "should behave sensibly when a source returns nil" do
+        Widget.plugin :slugging, source: :method_returning_nil
+        assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'Blah'))
+      end
+
+      it "should behave sensibly when a source returns an empty string" do
+        Widget.plugin :slugging, source: :method_returning_empty_string
+        assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'Blah'))
+      end
+
+      it "should behave sensibly when there's no source" do
+        Widget.plugin :slugging, source: nil
         assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'blah'))
       end
-    end
 
-    describe "from a collection of string source methods" do
-      def new_widget
-        Widget.create(name: "name", other_text: "other text", more_text: "more text")
-      end
+      describe "from a collection of string source methods" do
+        def new_widget
+          Widget.create(name: "name", other_text: "other text", more_text: "more text")
+        end
 
-      it "should use the source method collection to determine a slug" do
-        Widget.plugin :slugging, source: [:name, [:name, :other_text], [:name, :more_text], [:name, :other_text, :more_text]]
+        it "should use the source method collection to determine a slug" do
+          Widget.plugin :slugging, source: [:name, [:name, :other_text], [:name, :more_text], [:name, :other_text, :more_text]]
 
-        assert_slug 'name', new_widget
-        assert_slug 'name-other-text', new_widget
-        assert_slug 'name-more-text', new_widget
-        assert_slug 'name-other-text-more-text', new_widget
-        assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
-      end
+          assert_slug 'name', new_widget
+          assert_slug 'name-other-text', new_widget
+          assert_slug 'name-more-text', new_widget
+          assert_slug 'name-other-text-more-text', new_widget
+          assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+        end
 
-      it "should be resilient to sources that return nil" do
-        Widget.plugin :slugging, source: [:method_returning_nil, :name, [:name, :other_text]]
+        it "should be resilient to sources that return nil" do
+          Widget.plugin :slugging, source: [:method_returning_nil, :name, [:name, :other_text]]
 
-        assert_slug 'name', new_widget
-        assert_slug 'name-other-text', new_widget
-        assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
-      end
+          assert_slug 'name', new_widget
+          assert_slug 'name-other-text', new_widget
+          assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+        end
 
-      it "should raise an error if a source returns something unexpected" do
-        Widget.plugin :slugging, source: [:method_returning_object, :name]
-        assert_raises(Sequel::Plugins::Slugging::Error) { new_widget }
+        it "should raise an error if a source returns something unexpected" do
+          Widget.plugin :slugging, source: [:method_returning_object, :name]
+          assert_raises(Sequel::Plugins::Slugging::Error) { new_widget }
 
-        Widget.plugin :slugging, source: [:method_returning_false, :name]
-        assert_raises(Sequel::Plugins::Slugging::Error) { new_widget }
-      end
+          Widget.plugin :slugging, source: [:method_returning_false, :name]
+          assert_raises(Sequel::Plugins::Slugging::Error) { new_widget }
+        end
 
-      it "should be resilient to sources that return empty strings" do
-        Widget.plugin :slugging, source: [:method_returning_empty_string, :name, [:name, :other_text]]
+        it "should be resilient to sources that return empty strings" do
+          Widget.plugin :slugging, source: [:method_returning_empty_string, :name, [:name, :other_text]]
 
-        assert_slug 'name', new_widget
-        assert_slug 'name-other-text', new_widget
-        assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
-      end
+          assert_slug 'name', new_widget
+          assert_slug 'name-other-text', new_widget
+          assert_slug(/\Aname-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+        end
 
-      it "should behave sensibly when no sources are good" do
-        Widget.plugin :slugging, source: [:method_returning_empty_string, :method_returning_nil]
-        assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+        it "should behave sensibly when no sources are good" do
+          Widget.plugin :slugging, source: [:method_returning_empty_string, :method_returning_nil]
+          assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
 
-        Widget.plugin :slugging, source: [:method_returning_nil, :method_returning_empty_string]
-        assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+          Widget.plugin :slugging, source: [:method_returning_nil, :method_returning_empty_string]
+          assert_slug(/\A[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, new_widget)
+        end
       end
     end
 
