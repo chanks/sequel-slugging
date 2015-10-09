@@ -42,7 +42,7 @@ module Sequel
         attr_reader :slugging_opts
 
         Sequel::Plugins.inherited_instance_variables(self, :@slugging_opts => ->(h){h.dup.freeze})
-        Sequel::Plugins.def_dataset_methods(self, :from_slug)
+        Sequel::Plugins.def_dataset_methods(self, [:from_slug, :from_slug!])
       end
 
       module InstanceMethods
@@ -89,12 +89,12 @@ module Sequel
             case id_or_slug
             when String
               if id_or_slug =~ /\A\d{1,}\z/
-                where(id: id_or_slug.to_i).first!
+                where(id: id_or_slug.to_i).first
               else
-                where(slug: id_or_slug).first!
+                where(slug: id_or_slug).first
               end
             when Integer
-              where(pk => id_or_slug).first!
+              where(pk => id_or_slug).first
             else
               raise "Argument to Dataset#from_slug needs to be a String or Integer"
             end
@@ -103,13 +103,15 @@ module Sequel
             return record if record
 
             if id_or_slug =~ UUID_REGEX
-              where(pk => id_or_slug).first!
-            else
-              raise Sequel::NoMatchingRow
+              where(pk => id_or_slug).first
             end
           else
             raise "#from_slug can't handle this pk: #{pk_schema.inspect}"
           end
+        end
+
+        def from_slug!(id_or_slug)
+          from_slug(id_or_slug) || raise(Sequel::NoMatchingRow)
         end
       end
     end

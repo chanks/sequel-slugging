@@ -82,18 +82,23 @@ class SluggingSpec < Minitest::Spec
       it "should successfully look up records by their slug" do
         widget = Widget.create name: "Blah"
         assert_equal widget.id, Widget.from_slug('blah').id
+        assert_equal widget.id, Widget.from_slug!('blah').id
       end
 
       it "should successfully look up records by their id" do
         widget = Widget.create name: "Blah"
         assert_equal widget.id, Widget.from_slug(widget.id).id
+        assert_equal widget.id, Widget.from_slug!(widget.id).id
         assert_equal widget.id, Widget.from_slug(widget.id.to_s).id
+        assert_equal widget.id, Widget.from_slug!(widget.id.to_s).id
       end
 
-      it "should not error in the id lookup when it isn't formatted like an integer" do
+      it "should respond appropriately when the slug or id doesn't exist" do
         widget = Widget.create name: "Blah"
-        assert_raises(Sequel::NoMatchingRow){Widget.from_slug('gsnrosehe')}
-        assert_raises(Sequel::NoMatchingRow){Widget.from_slug(widget.id + 1)}
+        assert_nil Widget.from_slug('gsnrosehe')
+        assert_nil Widget.from_slug(widget.id + 1)
+        assert_raises(Sequel::NoMatchingRow){Widget.from_slug!('gsnrosehe')}
+        assert_raises(Sequel::NoMatchingRow){Widget.from_slug!(widget.id + 1)}
       end
     end
 
@@ -118,16 +123,19 @@ class SluggingSpec < Minitest::Spec
       it "should successfully look up records by their slug" do
         widget = Widget.create name: "Blah"
         assert_equal widget.id, Widget.from_slug('blah').id
+        assert_equal widget.id, Widget.from_slug!('blah').id
       end
 
       it "should successfully look up records by their id" do
         widget = Widget.create name: "Blah"
         assert_equal widget.id, Widget.from_slug(widget.id).id
+        assert_equal widget.id, Widget.from_slug!(widget.id).id
       end
 
-      it "should not pass the id to the DB when it isn't formatted like a uuid" do
+      it "should respond appropriately when the slug or id isn't found" do
         widget = Widget.create name: "Blah"
-        assert_raises(Sequel::NoMatchingRow){Widget.from_slug('gsnrosehe')}
+        assert_nil Widget.from_slug('gsnrosehe')
+        assert_raises(Sequel::NoMatchingRow){Widget.from_slug!('gsnrosehe')}
       end
     end
   end
