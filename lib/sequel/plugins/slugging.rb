@@ -123,10 +123,18 @@ module Sequel
           reserved = Sequel::Plugins::Slugging.reserved_words
           return false if reserved && reserved.include?(slug)
 
-          ds = self.class.dataset.where(slug: slug)
-
-          # If the record already exists, don't consider its own slug to be 'taken'.
-          ds = ds.exclude(self.class.primary_key => pk) if pk
+          ds =
+            if history_table = self.class.slugging_opts[:history]
+              ds = db[history_table].where(slug: slug, sluggable_type: self.class.to_s)
+              # If the record already exists, don't consider its own slug to be 'taken'.
+              ds = ds.exclude(sluggable_id: pk) if pk
+              ds
+            else
+              ds = self.class.dataset.where(slug: slug)
+              # If the record already exists, don't consider its own slug to be 'taken'.
+              ds = ds.exclude(self.class.primary_key => pk) if pk
+              ds
+            end
 
           ds.empty?
         end
