@@ -322,7 +322,14 @@ class SluggingSpec < Minitest::Spec
         assert_slug(/\Ablah-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\z/, Widget.create(name: 'blah'))
       end
 
-      it "should look up slugs from that table when querying by slug"
+      it "should look up slugs from that table when querying by slug" do
+        widget = Widget.create(name: 'Blah')
+        widget.update name: 'New blah!', other_text: "trigger slug regeneration"
+
+        assert_equal ['blah', 'new-blah'], DB[:slug_history].select_map(:slug).sort
+        assert_equal widget.id, Widget.from_slug('blah').id
+        assert_equal widget.id, Widget.from_slug('new-blah').id
+      end
     end
   end
 end

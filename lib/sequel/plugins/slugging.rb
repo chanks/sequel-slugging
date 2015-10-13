@@ -161,19 +161,30 @@ module Sequel
               if pk_or_slug =~ INTEGER_REGEX
                 where(pk => pk_or_slug.to_i).first
               else
-                where(slug: pk_or_slug).first
+                lookup_by_slug(pk_or_slug)
               end
             else
               raise "Argument to Dataset#from_slug needs to be a String or Integer"
             end
           when :uuid
-            if record = where(slug: pk_or_slug).first
+            if record = lookup_by_slug(pk_or_slug)
               record
             elsif pk_or_slug =~ UUID_REGEX
               where(pk => pk_or_slug).first
             end
           else
             raise "Unexpected pk_type: #{pk_type.inspect}"
+          end
+        end
+
+        def lookup_by_slug(slug)
+          if history = model.slugging_opts[:history]
+            m = model
+            if pk = m.db[history].where(sluggable_type: m.to_s, slug: slug).get(:sluggable_id)
+              where(m.primary_key => pk).first
+            end
+          else
+            where(slug: slug).first
           end
         end
       end
