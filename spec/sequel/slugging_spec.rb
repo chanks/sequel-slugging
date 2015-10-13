@@ -53,13 +53,13 @@ class SluggingSpec < Minitest::Spec
   end
 
   it "should have the slugging opts available on the model" do
-    assert_equal Widget.slugging_opts, {source: :name}
+    assert_equal Widget.slugging_opts[:source], :name
     assert Widget.slugging_opts.frozen?
   end
 
   it "should support replacing slugging opts without issue" do
     Widget.plugin :slugging, source: :other
-    assert_equal Widget.slugging_opts, {source: :other}
+    assert_equal Widget.slugging_opts[:source], :other
     assert Widget.slugging_opts.frozen?
   end
 
@@ -67,10 +67,10 @@ class SluggingSpec < Minitest::Spec
     class WidgetSubclass < Widget
     end
 
-    assert_equal Widget.slugging_opts, {source: :name}
+    assert_equal Widget.slugging_opts[:source], :name
     assert Widget.slugging_opts.frozen?
 
-    assert_equal WidgetSubclass.slugging_opts, {source: :name}
+    assert_equal WidgetSubclass.slugging_opts[:source], :name
     assert WidgetSubclass.slugging_opts.frozen?
   end
 
@@ -93,9 +93,20 @@ class SluggingSpec < Minitest::Spec
   end
 
   describe "when the record is being saved" do
-    it "should calculate a slug when the record is created"
+    it "should calculate a slug when the record is created" do
+      assert_equal 'blah', Widget.create(name: 'Blah!').slug
+    end
 
-    it "should also calculate a slug when an optional proc is satisfied"
+    it "should also calculate a slug when an optional proc is satisfied" do
+      Widget.plugin :slugging, source: :name, regenerate_slug: proc { !!other_text }
+
+      widget = Widget.create(name: 'Blah!')
+      assert_equal 'blah', widget.slug
+      widget.update name: "Blah again!"
+      assert_equal 'blah', widget.slug
+      widget.update other_text: "Trigger slugification"
+      assert_equal 'blah-again', widget.slug
+    end
   end
 
   describe "when finding a record by a slug or id" do
@@ -183,8 +194,6 @@ class SluggingSpec < Minitest::Spec
         Sequel::Plugins::Slugging.maximum_length = 50
       end
     end
-
-    it "should support logic to normalize slug input"
 
     describe "from a source method" do
       it "should simplify the returned text by default" do

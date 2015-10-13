@@ -35,9 +35,9 @@ module Sequel
         end
       end
 
-      def self.configure(model, source:)
+      def self.configure(model, source:, regenerate_slug: nil)
         model.instance_eval do
-          @slugging_opts = {source: source}.freeze
+          @slugging_opts = {source: source, regenerate_slug: regenerate_slug}.freeze
         end
       end
 
@@ -63,8 +63,16 @@ module Sequel
       module InstanceMethods
         private
 
-        def before_save
+        def before_create
           set_slug
+          super
+        end
+
+        def before_update
+          if p = self.class.slugging_opts[:regenerate_slug]
+            set_slug if instance_exec(&p)
+          end
+
           super
         end
 
