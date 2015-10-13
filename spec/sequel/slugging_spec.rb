@@ -286,10 +286,28 @@ class SluggingSpec < Minitest::Spec
       end
     end
 
-    describe "when given the history option" do
-      it "should avoid slugs that have been used before"
+    describe "when given a history table" do
+      it "should save new slugs to the history table as they are assigned" do
+        Widget.plugin :slugging, source: :name, history: :slug_history, regenerate_slug: proc { !!other_text }
+        widget = Widget.create(name: 'Blah')
+        assert_slug 'blah', widget
 
-      it "should save new slugs to the history table as they are assigned"
+        assert_equal 1, DB[:slug_history].count
+        history = DB[:slug_history].first
+        assert_equal 'SluggingSpec::Widget', history[:sluggable_type]
+        assert_equal widget.id, history[:sluggable_id]
+        assert_equal 'blah', history[:slug]
+
+        widget.update name: 'New name!', other_text: "trigger slug regeneration"
+        assert_slug 'new-name', widget
+        assert_equal 2, DB[:slug_history].count
+        new_history = DB[:slug_history].order(Sequel.desc(:created_at)).first
+        assert_equal 'SluggingSpec::Widget', new_history[:sluggable_type]
+        assert_equal widget.id, new_history[:sluggable_id]
+        assert_equal 'new-name', new_history[:slug]
+      end
+
+      it "should avoid slugs that have been used before"
 
       it "should look up slugs from that table when querying by slug"
     end

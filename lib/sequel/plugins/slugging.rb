@@ -33,11 +33,17 @@ module Sequel
         def reserved_words=(value)
           @reserved_words = Set.new(value)
         end
-      end
 
-      def self.configure(model, source:, regenerate_slug: nil)
-        model.instance_eval do
-          @slugging_opts = {source: source, regenerate_slug: regenerate_slug}.freeze
+        def apply(model, opts = {})
+          model.instance_eval do
+            plugin :instance_hooks
+          end
+        end
+
+        def configure(model, source:, regenerate_slug: nil, history: nil)
+          model.instance_eval do
+            @slugging_opts = {source: source, regenerate_slug: regenerate_slug, history: history}.freeze
+          end
         end
       end
 
@@ -78,6 +84,12 @@ module Sequel
 
         def set_slug
           self.slug = find_available_slug
+
+          if table = self.class.slugging_opts[:history]
+            after_save_hook do
+              db[table].insert(slug: slug, sluggable_id: pk, sluggable_type: self.class.to_s, created_at: Time.now)
+            end
+          end
         end
 
         def find_available_slug

@@ -19,3 +19,13 @@ DB.create_table :widgets do
   text :more_text
   text :slug, null: false, unique: true
 end
+
+DB.drop_table? :slug_history
+
+DB.create_table :slug_history do
+  primary_key :id
+  text :slug, null: false
+  integer :sluggable_id, null: false
+  text :sluggable_type, null: false
+  timestamptz :created_at, null: false
+end
