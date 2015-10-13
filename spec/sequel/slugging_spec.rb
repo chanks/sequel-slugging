@@ -92,6 +92,12 @@ class SluggingSpec < Minitest::Spec
     end
   end
 
+  describe "when the record is being saved" do
+    it "should calculate a slug when the record is created"
+
+    it "should also calculate a slug when an optional proc is satisfied"
+  end
+
   describe "when finding a record by a slug or id" do
     describe "when the id is an integer type" do
       it "should successfully look up records by their slug" do
@@ -179,8 +185,6 @@ class SluggingSpec < Minitest::Spec
     end
 
     it "should support logic to normalize slug input"
-
-    it "should support logic to determine when to calculate a new slug"
 
     describe "from a source method" do
       it "should simplify the returned text by default" do
