@@ -110,7 +110,13 @@ module Sequel
           return false unless acceptable_string?(slug)
           reserved = Sequel::Plugins::Slugging.reserved_words
           return false if reserved && reserved.include?(slug)
-          self.class.dataset.where(slug: slug).empty?
+
+          ds = self.class.dataset.where(slug: slug)
+
+          # If the record already exists, don't consider its own slug to be 'taken'.
+          ds = ds.exclude(self.class.primary_key => pk) if pk
+
+          ds.empty?
         end
 
         def acceptable_string?(string)

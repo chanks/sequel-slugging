@@ -107,6 +107,15 @@ class SluggingSpec < Minitest::Spec
       widget.update other_text: "Trigger slugification"
       assert_equal 'blah-again', widget.slug
     end
+
+    it "should not consider its own slug 'taken' when prompted to regenerate it" do
+      Widget.plugin :slugging, source: :name, regenerate_slug: proc { !!other_text }
+
+      widget = Widget.create(name: 'Blah!')
+      assert_equal 'blah', widget.slug
+      widget.update other_text: "Trigger slugification"
+      assert_equal 'blah', widget.slug
+    end
   end
 
   describe "when finding a record by a slug or id" do
